@@ -1,0 +1,87 @@
+# Transforming Edible vs. Poisonous Mushrooms Data Set 
+## Heather Geiger
+## February 3, 2018
+
+Download, then read in csv file.
+
+```{r}
+download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data",destfile="agaricus-lepiota.data")
+mushrooms <- read.csv("agaricus-lepiota.data",header=FALSE,stringsAsFactors=FALSE)
+```
+
+Assign column names based on the data dictionary.
+
+```{r}
+colnames(mushrooms) <- c("edible-status","cap-shape","cap-surface","cap-color","bruises","odor","gill-attachment","gill-spacing","gill-size","gill-color","stalk-shape","stalk-root","stalk-surface-above-ring","stalk-surface-below-ring","stalk-color-above-ring","stalk-color-below-ring","veil-type","veil-color","ring-number","ring-type","spore-print-color","population","habitat")
+```
+
+Subset to include only edible-status plus columns that can be used to determine if a mushroom is edible.
+
+```{r}
+mushrooms <- mushrooms[,c("edible-status","odor","spore-print-color","stalk-surface-below-ring","stalk-color-above-ring","habitat","population","cap-color")]
+```
+
+Rename columns to something more suitable for R.
+
+```{r}
+colnames(mushrooms) <- c("edible.status","odor","spore.print.color","stalk.surface.below.ring","stalk.color.above.ring","habitat","population","cap.color")
+```
+
+#Use dplyr to change the values to something more readable for each column.
+
+```{r}
+library(dplyr)
+
+mushrooms$edible.status <- plyr::mapvalues(mushrooms$edible.status,
+	from = c("e","p"),
+	to=c("edible","poisonous"))
+mushrooms$odor <- plyr::mapvalues(mushrooms$odor,
+	from = c("a","l","c","y","f","m","n","p","s"),
+	to = c("almond","anise","creosote","fishy","foul","musty","none","pungent","spicy"))
+mushrooms$spore.print.color <- plyr::mapvalues(mushrooms$spore.print.color,
+	from = c("k","n","b","h","r","o","u","w","y"),
+	to = c("black","brown","buff","chocolate","green","orange","purple","white","yellow"))
+mushrooms$stalk.surface.below.ring <- plyr::mapvalues(mushrooms$stalk.surface.below.ring,
+	from = c("f","y","k","s"),
+	to = c("fibrous","scaly","silky","smooth"))
+mushrooms$stalk.color.above.ring <- plyr::mapvalues(mushrooms$stalk.color.above.ring,
+	from = c("n","b","c","g","o","p","e","w","y"),
+	to = c("brown","buff","cinnamon","gray","orange","pink","red","white","yellow"))
+mushrooms$habitat <- plyr::mapvalues(mushrooms$habitat,
+	from = c("g","l","m","p","u","w","d"),
+	to = c("grasses","leaves","meadows","paths","urban","waste","woods"))
+mushrooms$population <- plyr::mapvalues(mushrooms$population,
+	from = c("a","c","n","s","v","y"),
+	to = c("abundant","clustered","numerous","scattered","several","solitary"))
+mushrooms$cap.color <- plyr::mapvalues(mushrooms$cap.color,
+	from = c("n","b","c","g","r","p","u","e","w","y"),
+	to = c("brown","buff","cinnamon","gray","green","pink","purple","red","white","yellow"))
+```
+
+For each instance, let's also see which rules it meets.
+
+```{r}
+rule1 <- ifelse(mushrooms$odor != "almond" & mushrooms$odor != "anise" & mushrooms$odor != "none",
+	"poisonous","edible")
+
+rule2 <- ifelse(mushrooms$spore.print.color == "green",
+	"poisonous","edible")
+
+rule3 <- ifelse(mushrooms$odor == "none" & mushrooms$stalk.surface.below.ring == "scaly" & mushrooms$stalk.color.above.ring != "brown",
+	"poisonous","edible")
+
+#For rule 4, can use either habitat or population, because all white-cap mushrooms that have habitat=leaves also have population=clustered.
+#Let's use population.
+
+rule4 <- ifelse(mushrooms$population == "clustered" & mushrooms$cap.color == "white",
+	"poisonous","edible")
+```
+
+Compare mushrooms called poisonous by these rules versus the first column.
+
+```{r}
+length(which(rule1 == "poisonous" | rule2 == "poisonous" | rule3 == "poisonous" | rule4 == "poisonous"))
+length(which(mushrooms$edible.status == "poisonous"))
+```
+
+They match perfectly, as they should.
